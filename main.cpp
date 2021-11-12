@@ -1,10 +1,18 @@
-#include <iostream>
+#include <bits/stdc++.h>
+#include "ScreenRecorder.h"
 
-extern "C"{
-#include <libavcodec/avcodec.h>
-}
+using namespace std;
 
-int main() {
-    std::cout << "Hello, Worldsssssss!" << std::endl;
+/* driver function to run the application */
+int main()
+{
+    ScreenRecorder screen_record;
+
+    screen_record.openCamera();
+    screen_record.init_outputfile();
+    //screen_record.CaptureVideoFrames();
+
+    cout<<"\nprogram executed successfully\n";
+
     return 0;
 }
