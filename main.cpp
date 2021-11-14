@@ -1,4 +1,3 @@
-#include <bits/stdc++.h>
 #include "ScreenRecorder.h"
 
 using namespace std;

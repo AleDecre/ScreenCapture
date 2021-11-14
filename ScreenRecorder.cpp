@@ -4,65 +4,11 @@ using namespace std;
 
 
 
-
-int pippo(AVCodecContext *codec,
-          const AVCodecParameters *par)
-{
-    codec->codec_type = AVMEDIA_TYPE_VIDEO;
-    codec->codec_id   = par->codec_id;
-    codec->codec_tag  = par->codec_tag;
-
-    codec->bit_rate              = par->bit_rate;
-    codec->bits_per_coded_sample = par->bits_per_coded_sample;
-    codec->bits_per_raw_sample   = par->bits_per_raw_sample;
-    codec->profile               = par->profile;
-    codec->level                 = par->level;
-
-    switch (par->codec_type) {
-        case AVMEDIA_TYPE_VIDEO:
-            //codec->pix_fmt                = par->format;
-            codec->width                  = par->width;
-            codec->height                 = par->height;
-            codec->field_order            = par->field_order;
-            codec->color_range            = par->color_range;
-            codec->color_primaries        = par->color_primaries;
-            codec->color_trc              = par->color_trc;
-            codec->colorspace             = par->color_space;
-            codec->chroma_sample_location = par->chroma_location;
-            codec->sample_aspect_ratio    = par->sample_aspect_ratio;
-            codec->has_b_frames           = par->video_delay;
-            break;
-        case AVMEDIA_TYPE_AUDIO:
-            //codec->sample_fmt       = par->format;
-            codec->channel_layout   = par->channel_layout;
-            codec->channels         = par->channels;
-            codec->sample_rate      = par->sample_rate;
-            codec->block_align      = par->block_align;
-            codec->frame_size       = par->frame_size;
-            codec->delay            =
-            codec->initial_padding  = par->initial_padding;
-            codec->trailing_padding = par->trailing_padding;
-            codec->seek_preroll     = par->seek_preroll;
-            break;
-        case AVMEDIA_TYPE_SUBTITLE:
-            codec->width  = par->width;
-            codec->height = par->height;
-            break;
-    }
-
-    return 0;
-}
-
-
-
-
-
-
-
 /* initialize the resources*/
 ScreenRecorder::ScreenRecorder()
 {
     avdevice_register_all();
+    pAVCodecContext = new AVCodecContext;
     cout<<"\nall required functions are registered successfully";
 }
 
@@ -155,8 +101,7 @@ refer : https://www.ffmpeg.org/ffmpeg-devices.html#x11grab
 
     // assign pAVFormatContext to VideoStreamIndx
 
-    const AVCodecParameters *x = pAVFormatContext->streams[VideoStreamIndx]->codecpar;
-    value = pippo(pAVCodecContext , x);
+    value = avcodec_parameters_to_context(pAVCodecContext , pAVFormatContext->streams[VideoStreamIndx]->codecpar);
 
     if( value < 0 )
     {
@@ -180,14 +125,11 @@ refer : https://www.ffmpeg.org/ffmpeg-devices.html#x11grab
 }
 
 
-
-
-
 int ScreenRecorder::init_outputfile()
 {
     outAVFormatContext = NULL;
     value = 0;
-    output_file = "C:/Users/Andre/OneDrive/Desktop/output.mp4";
+    output_file = "C:/Users/aless/Desktop/output.mp4";
 
     avformat_alloc_output_context2(&outAVFormatContext, NULL, NULL, output_file);
     if (!outAVFormatContext)
@@ -288,12 +230,12 @@ int ScreenRecorder::init_outputfile()
     }
 
     /* imp: mp4 container or some advanced container file required header information*/
-    value = avformat_write_header(outAVFormatContext , &options);
-    if(value < 0)
-    {
-        cout<<"\nerror in writing the header context";
-        exit(1);
-    }
+    //value = avformat_write_header(outAVFormatContext , &options);
+    //if(value < 0)
+    //{
+    //    cout<<"\nerror in writing the header context";
+    //    exit(value);
+    //}
 
     /*
     // uncomment here to view the complete video file informations
@@ -302,8 +244,3 @@ int ScreenRecorder::init_outputfile()
     */
     return 0;
 }
-
-
-
-
-
