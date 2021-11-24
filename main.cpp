@@ -9,7 +9,7 @@ int main()
 
     screen_record.openCamera();
     screen_record.init_outputfile();
-    //screen_record.CaptureVideoFrames();
+    screen_record.CaptureVideoFrames();
 
     cout<<"\nprogram executed successfully\n";
 
