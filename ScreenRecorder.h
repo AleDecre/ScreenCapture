@@ -73,7 +73,6 @@ private:
     AVCodecContext *outAVCodecContext;
 
     AVStream *video_st;
-    AVFrame *outAVFrame;
 
     const char *dev_name;
     const char *output_file;
@@ -84,6 +83,10 @@ private:
     int codec_id;
     int value;
     int VideoStreamIndx;
+
+
+
+    SwsContext* swsCtx_;
 
 public:
 

@@ -322,6 +322,20 @@ int ScreenRecorder::CaptureVideoFrames()
         exit(1);
     }
 
+
+    outFrame->format = outAVCodecContext->pix_fmt;
+    outFrame->width = outAVCodecContext->width;
+    outFrame->height = outAVCodecContext->height;
+
+    value = av_frame_get_buffer(outFrame, 0);
+    if (value < 0) {
+        fprintf(stderr, "Could not allocate the video frame data\n");
+        exit(1);
+    }
+
+
+
+
     int video_outbuf_size;
     int nbytes = av_image_get_buffer_size(outAVCodecContext->pix_fmt,outAVCodecContext->width,outAVCodecContext->height,32);
     uint8_t *video_outbuf = (uint8_t*)av_malloc(nbytes);
@@ -339,12 +353,12 @@ int ScreenRecorder::CaptureVideoFrames()
     }
 
 
-    SwsContext* swsCtx_;
+
 
     // Allocate and return swsContext.
     // a pointer to an allocated context, or NULL in case of error
     // Deprecated : Use sws_getCachedContext() instead.
-    swsCtx_ = sws_getCachedContext(NULL, pAVCodecContext->width,
+    swsCtx_ = sws_getContext(pAVCodecContext->width,
                              pAVCodecContext->height,
                              pAVCodecContext->pix_fmt,
                              outAVCodecContext->width,
@@ -354,9 +368,14 @@ int ScreenRecorder::CaptureVideoFrames()
 
 
     int ii = 0;
-    int no_frames = 100;
+    int no_frames = 2;
 
-    AVPacket outPacket;
+    AVPacket *outPacket = av_packet_alloc();
+    if( !outPacket )
+    {
+        cout<<"\nunable to allocate the avpacket";
+        exit(1);
+    }
     int j = 0;
 
     int got_picture;
@@ -382,21 +401,24 @@ int ScreenRecorder::CaptureVideoFrames()
                         break;
                     }
 
+
                     sws_scale(swsCtx_, pAVFrame->data, pAVFrame->linesize,0, pAVCodecContext->height, outFrame->data,outFrame->linesize);
-                    outPacket.data = NULL;    // packet data will be allocated by the encoder
-                    outPacket.size = 0;
+                    outPacket->data = NULL;    // packet data will be allocated by the encoder
+                    outPacket->size = 0;
 
                     //got_picture = avcodec_encode_video2(outAVCodecContext, &outPacket);
 
-                    value = avcodec_send_frame(outAVCodecContext, outAVFrame);
-                    if (value < 0) {
-                        av_log(NULL, AV_LOG_ERROR, "Error while receiving frame from the decoder\n");
+                    value = avcodec_send_frame(outAVCodecContext, outFrame);
+                    if (value == AVERROR(EAGAIN) || value == AVERROR_EOF || value == AVERROR(EINVAL)) {
+                        break;
+                    } else if (value < 0) {
+                        av_log(NULL, AV_LOG_ERROR, "Error while receiving a frame from the decoder\n");
                         break;
                     }
 
                     while (value >= 0) {
 
-                        value = avcodec_receive_packet(outAVCodecContext, &outPacket);
+                        value = avcodec_receive_packet(outAVCodecContext, outPacket);
                         if (value == AVERROR(EAGAIN) || value == AVERROR_EOF) {
                             break;
                         } else if (value < 0) {
@@ -404,20 +426,22 @@ int ScreenRecorder::CaptureVideoFrames()
                             break;
                         }
 
-                        if(outPacket.pts != AV_NOPTS_VALUE)
-                            outPacket.pts = av_rescale_q(outPacket.pts, video_st->time_base, video_st->time_base);
-                        if(outPacket.dts != AV_NOPTS_VALUE)
-                            outPacket.dts = av_rescale_q(outPacket.dts, video_st->time_base, video_st->time_base);
+                        if(outPacket->pts != AV_NOPTS_VALUE)
+                            outPacket->pts = av_rescale_q(outPacket->pts, video_st->time_base, video_st->time_base);
+                        if(outPacket->dts != AV_NOPTS_VALUE)
+                            outPacket->dts = av_rescale_q(outPacket->dts, video_st->time_base, video_st->time_base);
 
-                        printf("Write frame %3d (size= %2d)\n", j++, outPacket.size/1000);
-                        if(av_write_frame(outAVFormatContext , &outPacket) != 0)
+                        printf("Write frame %3d (size= %2d)\n", j++, outPacket->size/1000);
+                        if(av_write_frame(outAVFormatContext , outPacket) != 0)
                         {
                             cout<<"\nerror in writing video frame";
                         }
 
-                        av_packet_unref(&outPacket);
+                        av_packet_unref(outPacket);
                     }
+
                     av_packet_unref(pAVPacket);
+
                 } // frameFinished
         }
 
