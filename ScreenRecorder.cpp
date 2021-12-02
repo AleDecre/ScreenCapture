@@ -57,7 +57,6 @@ refer : https://www.ffmpeg.org/ffmpeg-devices.html#x11grab
     /* current below is for screen recording. to connect with camera use v4l2 as a input parameter for av_find_input_format */
     pAVInputFormat = av_find_input_format("gdigrab");
 
-
     /* set frame per second */
     value = av_dict_set( &options,"framerate","30",0 );
     if(value < 0)
@@ -72,11 +71,19 @@ refer : https://www.ffmpeg.org/ffmpeg-devices.html#x11grab
         cout<<"\nerror in setting preset values";
         exit(value);
     }
+
     value = avformat_open_input(&pAVFormatContext, "desktop", pAVInputFormat, &options);
     if(value != 0)
     {
         cout<<"\nerror in opening input device";
         exit(value);
+    }
+
+    value = avformat_find_stream_info(pAVFormatContext,NULL);
+    if(value < 0)
+    {
+        cout<<"\nunable to find the stream information";
+        exit(1);
     }
 
     VideoStreamIndx = -1;
@@ -100,12 +107,7 @@ refer : https://www.ffmpeg.org/ffmpeg-devices.html#x11grab
 
     // assign pAVFormatContext to VideoStreamIndx
 
-    pAVCodec = avcodec_find_decoder(pAVFormatContext->streams[VideoStreamIndx]->codecpar->codec_id);
-    if( pAVCodec == NULL )
-    {
-        cout<<"\nunable to find the decoder";
-        exit(1);
-    }
+
 
     pAVCodecContext = avcodec_alloc_context3(pAVCodec);
     if( !pAVCodecContext )
@@ -114,7 +116,22 @@ refer : https://www.ffmpeg.org/ffmpeg-devices.html#x11grab
         exit(1);
     }
 
-    value = avcodec_open2(pAVCodecContext , pAVCodec , NULL);//Initialize the AVCodecContext to use the given AVCodec.
+    value = avcodec_parameters_to_context(pAVCodecContext , pAVFormatContext->streams[VideoStreamIndx]->codecpar);
+    if( value < 0 )
+    {
+        cout<<"\nunable to create avcodec context.";
+        exit(value);
+    }
+
+    pAVCodec = avcodec_find_decoder(pAVCodecContext->codec_id);
+    if( pAVCodec == NULL )
+    {
+        cout<<"\nunable to find the decoder";
+        exit(1);
+    }
+
+
+    value = avcodec_open2(pAVCodecContext , pAVCodec , &options);//Initialize the AVCodecContext to use the given AVCodec.
     if( value < 0 )
     {
         cout<<"\nunable to open the av codec";
@@ -122,6 +139,24 @@ refer : https://www.ffmpeg.org/ffmpeg-devices.html#x11grab
     }
     return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 int ScreenRecorder::init_outputfile()
 {
@@ -303,23 +338,23 @@ int ScreenRecorder::CaptureVideoFrames()
         cout<<"\nerror in filling image array";
     }
 
-/*
-    SwsContext* swsCtx_ ;
+
+    SwsContext* swsCtx_;
 
     // Allocate and return swsContext.
     // a pointer to an allocated context, or NULL in case of error
     // Deprecated : Use sws_getCachedContext() instead.
-    sws_getCachedContext(swsCtx_, pAVCodecContext->width,
+    swsCtx_ = sws_getCachedContext(NULL, pAVCodecContext->width,
                              pAVCodecContext->height,
                              pAVCodecContext->pix_fmt,
                              outAVCodecContext->width,
                              outAVCodecContext->height,
                              outAVCodecContext->pix_fmt,
                              SWS_BICUBIC, NULL, NULL, NULL);
-*/
+
 
     int ii = 0;
-    int no_frames = 10;
+    int no_frames = 100;
 
     AVPacket outPacket;
     int j = 0;
@@ -331,7 +366,7 @@ int ScreenRecorder::CaptureVideoFrames()
         if( ii++ == no_frames )break;
         if(pAVPacket->stream_index == VideoStreamIndx)
         {
-            //value = avcodec_decode_video2( pAVCodecContext , pAVFrame , &frameFinished , pAVPacket );
+            //value = avcodec_decode_video2( pAVCodecContext , pAVFrame , &frameFinished , pAVPacket ); FATTO
 
                 value = avcodec_send_packet(pAVCodecContext, pAVPacket);
                 if (value < 0) {
@@ -347,42 +382,45 @@ int ScreenRecorder::CaptureVideoFrames()
                         break;
                     }
 
+                    sws_scale(swsCtx_, pAVFrame->data, pAVFrame->linesize,0, pAVCodecContext->height, outFrame->data,outFrame->linesize);
+                    outPacket.data = NULL;    // packet data will be allocated by the encoder
+                    outPacket.size = 0;
 
-                    //qui quello sotto senza if
+                    //got_picture = avcodec_encode_video2(outAVCodecContext, &outPacket);
 
-                }
-
-
-
-
-            if(frameFinished)// Frame successfully decoded :)
-            {
-                sws_scale(swsCtx_, pAVFrame->data, pAVFrame->linesize,0, pAVCodecContext->height, outFrame->data,outFrame->linesize);
-                outPacket.data = NULL;    // packet data will be allocated by the encoder
-                outPacket.size = 0;
-
-                //got_picture = avcodec_encode_video2(outAVCodecContext, &outPacket);
-
-                if(got_picture)
-                {
-                    if(pAVPacket->pts != AV_NOPTS_VALUE)
-                        pAVPacket->pts = av_rescale_q(pAVPacket->pts, video_st->time_base, video_st->time_base);
-                    if(pAVPacket->dts != AV_NOPTS_VALUE)
-                        pAVPacket->dts = av_rescale_q(pAVPacket->dts, video_st->time_base, video_st->time_base);
-
-                    printf("Write frame %3d (size= %2d)\n", j++, pAVPacket->size/1000);
-                    if(av_write_frame(outAVFormatContext , pAVPacket) != 0)
-                    {
-                        cout<<"\nerror in writing video frame";
+                    value = avcodec_send_frame(outAVCodecContext, outAVFrame);
+                    if (value < 0) {
+                        av_log(NULL, AV_LOG_ERROR, "Error while receiving frame from the decoder\n");
+                        break;
                     }
 
+                    while (value >= 0) {
+
+                        value = avcodec_receive_packet(outAVCodecContext, &outPacket);
+                        if (value == AVERROR(EAGAIN) || value == AVERROR_EOF) {
+                            break;
+                        } else if (value < 0) {
+                            av_log(NULL, AV_LOG_ERROR, "Error while receiving a frame from the decoder\n");
+                            break;
+                        }
+
+                        if(outPacket.pts != AV_NOPTS_VALUE)
+                            outPacket.pts = av_rescale_q(outPacket.pts, video_st->time_base, video_st->time_base);
+                        if(outPacket.dts != AV_NOPTS_VALUE)
+                            outPacket.dts = av_rescale_q(outPacket.dts, video_st->time_base, video_st->time_base);
+
+                        printf("Write frame %3d (size= %2d)\n", j++, outPacket.size/1000);
+                        if(av_write_frame(outAVFormatContext , &outPacket) != 0)
+                        {
+                            cout<<"\nerror in writing video frame";
+                        }
+
+                        av_packet_unref(&outPacket);
+                    }
                     av_packet_unref(pAVPacket);
-                } // got_picture
-
-                av_packet_unref(pAVPacket);
-            } // frameFinished
-
+                } // frameFinished
         }
+
     }// End of while-loop
 
     value = av_write_trailer(outAVFormatContext);
