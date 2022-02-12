@@ -27,7 +27,7 @@ find_library(AVDEVICE_LIBRARY avdevice)
 find_path(AVSCALE_INCLUDE_DIR libswscale/swscale.h)
 find_library(AVSCALE_LIBRARY swscale)
 
-add_executable(ScreenCapture main.cpp ScreenRecorder.cpp ScreenRecorder.h AudioContainer.cpp AudioContainer.h AudioVideoRecorder.cpp AudioVideoRecorder.h)
+add_executable(ScreenCapture main.cpp ScreenRecorder.cpp ScreenRecorder.h)
 
 target_include_directories(ScreenCapture PRIVATE  ${AVRESAMPLE_INCLUDE_DIR} ${AVSCALE_INCLUDE_DIR}  ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR} ${AVUTIL_INCLUDE_DIR} ${AVDEVICE_INCLUDE_DIR})
 target_link_libraries(ScreenCapture PRIVATE  ${AVRESAMPLE_LIBRARY} ${AVSCALE_LIBRARY}  ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${AVDEVICE_LIBRARY})

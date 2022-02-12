@@ -54,12 +54,12 @@ extern "C"
 class ScreenRecorder
 {
 private:
+public:
     const AVInputFormat *pAVInputFormat;//input di acquisizione
     AVFormatContext *pAVFormatContext;//context dell'input di acquisizione
 
     const AVOutputFormat *output_format;
-    AVFormatContext *outAVFormatContext_audio;//context del file finale
-    AVFormatContext *outAVFormatContext_video;//context del file finale
+    AVFormatContext *outAVFormatContext;//context del file finale
 
 
 
@@ -88,8 +88,7 @@ private:
     AVDictionary *options;
     AVOutputFormat *outAVOutputFormat;
 
-    const char *output_file_audio;
-    const char *output_file_video;
+    const char *output_file;
 
     int videoStreamIndx;
     int audioStreamIndx;
@@ -110,7 +109,7 @@ private:
     int add_samples_to_fifo(uint8_t **converted_input_samples, const int frame_size);
     int init_converted_samples(uint8_t ***converted_input_samples, int frame_size);
 
-public:
+
 
     ScreenRecorder();
     ~ScreenRecorder();
@@ -118,9 +117,11 @@ public:
     /* function to initiate communication with display library */
     int openScreenAndMic();
     int openScreen();
+    int openMic();
 
-    int init_outputfile_audio(std::string output_file);//deve essere chiamata prima dei set encoders
-    int init_outputfile_video(std::string output_file);//deve essere chiamata prima dei set encoders
+    int init_outputfile(std::string output_file);//deve essere chiamata prima dei set encoders
+
+    int writeInfo_afterSetEncoder_audio();
 
     int setVideoDecoder();
     int setVideoEncoder();
@@ -134,6 +135,7 @@ public:
     int encoding_fifo_audio_packets(int64_t videoPts);
 
     int recordVideo();
+    int recordAudio();
     int recordVideoAudio();
 };
 
