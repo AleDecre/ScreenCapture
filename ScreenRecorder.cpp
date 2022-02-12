@@ -107,7 +107,7 @@ int ScreenRecorder::openScreenAndMic() {
         exit(1);
     }
 
-    value = avformat_open_input(&pAVFormatContext, "audio=virtual-audio-capturer:video=screen-capture-recorder", pAVInputFormat, NULL);
+    value = avformat_open_input(&pAVFormatContext, "video=screen-capture-recorder:audio=virtual-audio-capturer", pAVInputFormat, NULL);
     if(value != 0){
         cout<<"\nerror in opening input device";
         exit(value);
@@ -253,16 +253,33 @@ int ScreenRecorder::setVideoAudioDecoders(){
 
 
 
-int ScreenRecorder::init_outputfile(string file){
+int ScreenRecorder::init_outputfile_audio(string file){
     int value = 0;
-    outAVFormatContext = NULL;
-    output_file = file.data();//conversione string a char*
+    outAVFormatContext_audio = NULL;
+    output_file_audio = file.data();//conversione string a char*
 
     value = 0;
-    output_file = "C:/Users/aless/Desktop/output.mp4";
+    //output_file = "C:/Users/Andre/OneDrive/Desktop/output.mp4";
 
-    avformat_alloc_output_context2(&outAVFormatContext, NULL, NULL, output_file);
-    if (!outAVFormatContext){
+    avformat_alloc_output_context2(&outAVFormatContext_audio, NULL, NULL, output_file_audio);
+    if (!outAVFormatContext_audio){
+        cout<<"\nerror in allocating av format output context";
+        exit(1);
+    }
+
+    return 0;
+}
+
+int ScreenRecorder::init_outputfile_video(string file){
+    int value = 0;
+    outAVFormatContext_video = NULL;
+    output_file_video = file.data();//conversione string a char*
+
+    value = 0;
+    //output_file = "C:/Users/Andre/OneDrive/Desktop/output.mp4";
+
+    avformat_alloc_output_context2(&outAVFormatContext_video, NULL, NULL, output_file_video);
+    if (!outAVFormatContext_video){
         cout<<"\nerror in allocating av format output context";
         exit(1);
     }
@@ -272,13 +289,13 @@ int ScreenRecorder::init_outputfile(string file){
 
 int ScreenRecorder::setAudioEncoder(){
     int value =0;
-    audioEncoder = avcodec_find_encoder(outAVFormatContext->oformat->audio_codec);
+    audioEncoder = avcodec_find_encoder(outAVFormatContext_audio->oformat->audio_codec);
     if( !audioEncoder ){
         cout<<"\nerror in finding the av codecs. try again with correct codec audio";
         exit(1);
     }
 
-    audio_st = avformat_new_stream(outAVFormatContext , NULL);
+    audio_st = avformat_new_stream(outAVFormatContext_audio , NULL);
     if( !audio_st ){
         cout<<"\nerror in creating a av format new stream (audio)";
         exit(1);
@@ -294,12 +311,17 @@ int ScreenRecorder::setAudioEncoder(){
     audioEncoderContext->channel_layout = select_channel_layout(audioEncoder);
     audioEncoderContext->sample_rate = audioDecoderContext->sample_rate;//44100;
     //audioEncoderContext->sample_rate    = select_sample_rate(audioEncoder);
-    //audioEncoderContext->sample_fmt   = AV_SAMPLE_FMT_FLTP;
     audioEncoderContext->sample_fmt = AV_SAMPLE_FMT_FLTP; //audioEncoder->sample_fmts[0];
     audioEncoderContext->bit_rate = 64000;
+    audioEncoderContext->block_align = 1;
+    audioEncoderContext->initial_padding = 1;
+    audioEncoderContext->trailing_padding = 1;
+    audioEncoderContext->seek_preroll = 1;
+    audioEncoderContext->frame_size = audioDecoderContext->frame_size;
 
-    audioEncoderContext->extradata = audioDecoderContext->extradata;
-    audioEncoderContext->extradata_size = audioDecoderContext->extradata_size;
+
+    //audioEncoderContext->extradata = audioDecoderContext->extradata;
+    //audioEncoderContext->extradata_size = audioDecoderContext->extradata_size;
 
     audio_st->time_base.num = 1;
     audio_st->time_base.den = audioDecoderContext->sample_rate;
@@ -310,7 +332,7 @@ int ScreenRecorder::setAudioEncoder(){
         exit(1);
     }
 
-    value = avcodec_parameters_from_context(outAVFormatContext->streams[audioStreamIndx]->codecpar , audioEncoderContext);
+    value = avcodec_parameters_from_context(outAVFormatContext_audio->streams[audioStreamIndx]->codecpar , audioEncoderContext);
     if( value < 0 ){
         cout<<"\nunable to modify format context stream audio.";
         exit(value);
@@ -326,13 +348,13 @@ int ScreenRecorder::setAudioEncoder(){
 
 int ScreenRecorder::setVideoEncoder(){
     int value = 0;
-    videoEncoder = avcodec_find_encoder(outAVFormatContext->oformat->video_codec);
+    videoEncoder = avcodec_find_encoder(outAVFormatContext_video->oformat->video_codec);
     if( !videoEncoder ){
         cout<<"\nerror in finding the av codecs. try again with correct codec video";
         exit(1);
     }
 
-    video_st = avformat_new_stream(outAVFormatContext , NULL);
+    video_st = avformat_new_stream(outAVFormatContext_video , NULL);
     if( !video_st ){
         cout<<"\nerror in creating a av format new stream (video)";
         exit(1);
@@ -355,8 +377,9 @@ int ScreenRecorder::setVideoEncoder(){
     videoEncoderContext->max_b_frames = 2;
     videoEncoderContext->time_base.num = 1;
     videoEncoderContext->time_base.den = 10 ; // 15fps
+    videoEncoderContext->sample_rate;
 
-    value = avcodec_parameters_from_context(outAVFormatContext->streams[videoStreamIndx]->codecpar , videoEncoderContext);
+    value = avcodec_parameters_from_context(outAVFormatContext_video->streams[videoStreamIndx]->codecpar , videoEncoderContext);
     if( value < 0 ){
         cout<<"\nunable to modify format context stream video.";
         exit(value);
@@ -370,13 +393,13 @@ int ScreenRecorder::setVideoEncoder(){
 
     /* Some container formats (like MP4) require global headers to be present
    Mark the encoder so that it behaves accordingly. */
-    if ( outAVFormatContext->oformat->flags & AVFMT_GLOBALHEADER){
+    if ( outAVFormatContext_video->oformat->flags & AVFMT_GLOBALHEADER){
         videoEncoderContext->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     }
 
     /* create empty video file */
-    if ( !(outAVFormatContext->flags & AVFMT_NOFILE) ){
-        if( avio_open2(&outAVFormatContext->pb , output_file , AVIO_FLAG_WRITE ,NULL, NULL) < 0 ){
+    if ( !(outAVFormatContext_video->flags & AVFMT_NOFILE) ){
+        if( avio_open2(&outAVFormatContext_video->pb , output_file_video , AVIO_FLAG_WRITE ,NULL, NULL) < 0 ){
             cout<<"\nerror in creating the video file";
             exit(1);
         }
@@ -389,13 +412,25 @@ int ScreenRecorder::setVideoAudioEncoders(){
     setAudioEncoder();
 
     int value;
-    value = avformat_write_header(outAVFormatContext , NULL);
+    value = avformat_write_header(outAVFormatContext_audio , NULL);
     if(value < 0){
         cout<<"\nerror in writing the header context";
         exit(value);
     }
-    if(outAVFormatContext->nb_streams != 2){
-        cout<<"\noutput file dose not contain any stream, number is: "<< outAVFormatContext->nb_streams << endl; ;
+    if(outAVFormatContext_audio->nb_streams != 1){
+        cout<<"\noutput file dose not contain any stream, number is: "<< outAVFormatContext_audio->nb_streams << endl; ;
+        exit(1);
+    }
+
+
+    //VIDEO
+    value = avformat_write_header(outAVFormatContext_video , NULL);
+    if(value < 0){
+        cout<<"\nerror in writing the header context";
+        exit(value);
+    }
+    if(outAVFormatContext_video->nb_streams != 1){
+        cout<<"\noutput file dose not contain any stream, number is: "<< outAVFormatContext_video->nb_streams << endl; ;
         exit(1);
     }
     return 0;
@@ -545,8 +580,6 @@ int ScreenRecorder::init_converted_samples(uint8_t ***converted_input_samples, i
     return 0;
 }
 
-
-
 int ScreenRecorder::convert_samples(const uint8_t **input_data, uint8_t **converted_data, const int frame_size){
     int error;
     /* Convert the samples using the resampler. */
@@ -577,8 +610,6 @@ int ScreenRecorder::add_samples_to_fifo(uint8_t **converted_input_samples, const
     return 0;
 }
 
-
-
 int ScreenRecorder::decode_encode_write_video(int j){
     int value;
 
@@ -595,6 +626,14 @@ int ScreenRecorder::decode_encode_write_video(int j){
         av_log(NULL, AV_LOG_ERROR, "Error while receiving a frame from the decoder\n");
         return 1;//break;
     }
+
+    //lista a puntatori di pacchetti decodificati.............
+    //lista a puntattoi di audio decodificati....
+    //audio e video con pts ok in una struttra dati.....
+    //1 processo salva tutti i frame video in un video
+    //1 provesso salva tutti i frame audio in un audio
+    //processo padre muxa il tutto
+    //elimina vidoe e audio iniziali e salva solo muxato
 
     sws_scale(swsCtx_, inFrame->data, inFrame->linesize,0, videoDecoderContext->height, outFrame->data,outFrame->linesize);
     outPacket->data = NULL;    // packet data will be allocated by the encoder
@@ -623,11 +662,9 @@ int ScreenRecorder::decode_encode_write_video(int j){
 
     outPacket->pts = av_rescale_q(outPacket->pts, videoEncoderContext->time_base, video_st->time_base);
     outPacket->dts = av_rescale_q(outPacket->dts, videoEncoderContext->time_base, video_st->time_base);
-    outPacket->pts = pts - 3;
-    outPacket->dts = pts - 3;
-    pts += 1;
+
     cout<< "video pts: " << outPacket->dts;
-    printf("Write frame %3d %3d (size= %2d)", j++, outPacket->size/1000);
+    printf("\nWrite frame video %3d %3d (size= %2d)\n", j++, outPacket->size/1000);
 
     /*
     AVPacket *newpacket = (AVPacket*)malloc(sizeof(struct AVPacket));
@@ -654,10 +691,10 @@ int ScreenRecorder::decode_encode_write_video(int j){
     newpacket3->dts = outPacket->dts + 9000;
     newpacket4->pts = outPacket->pts + 12000;
     newpacket4->dts = outPacket->dts + 12000;*/
-    if(av_interleaved_write_frame(outAVFormatContext , outPacket) != 0){//scrivi il pacchetto su file
+    if(av_interleaved_write_frame(outAVFormatContext_video , outPacket) != 0){//scrivi il pacchetto su file
         cout<<"error in writing video frame\n";
     }else{
-        cout<<" ok";
+        cout<<"ok write video" << endl;
     }
     /*
     if(av_interleaved_write_frame(outAVFormatContext , newpacket) != 0)
@@ -686,8 +723,6 @@ int ScreenRecorder::decode_encode_write_video(int j){
     av_packet_unref(outPacket);
     return 0;
 }
-
-
 
 /* function to capture and store data in frames by allocating required memory and auto deallocating the memory.   */
 int ScreenRecorder::recordVideoAudio()
@@ -745,19 +780,20 @@ int ScreenRecorder::recordVideoAudio()
     int ii = 0;
     int no_sec = 5;
     //int no_frames = no_sec * videoEncoderContext->time_base.den;//numero di frames = secondi * fps
-    int no_frames = 1000;
+    int no_frames = 200;
 
     int j = 0;//buggato ma è inutile
     //int64_t pts = 0;
     int64_t dts = 0;
     int got_picture;
+    int64_t pts = 0;
 
     while( av_read_frame( pAVFormatContext , inPacket ) >= 0 )
     {
         if( ii++ == no_frames )break;
 
         if(inPacket->stream_index == videoStreamIndx){
-            cout <<  endl << "video packet: ";
+            cout <<  endl << "video packet: " << endl;
             value = decode_encode_write_video(j);
             if(value == 1){
                 break;
@@ -767,14 +803,13 @@ int ScreenRecorder::recordVideoAudio()
             }
         }
 
-        if(inPacket->stream_index == audioStreamIndx ){
-            cout << endl << "audio packet: " << inPacket->pts <<" ";
+        if(inPacket->stream_index == audioStreamIndx && false){
+            cout << "audio packet" << endl;
             //---------------------------------------------------------------------------------------------------
             //DECODING
             value = avcodec_send_packet(audioDecoderContext, inPacket);
             if (value < 0) {
                 av_log(NULL, AV_LOG_ERROR, "Error while sending a packet to the decoder\n");
-                //break;
                 continue;
             }
 
@@ -804,69 +839,76 @@ int ScreenRecorder::recordVideoAudio()
             //Passa a fare encoding solo se ho abbastanza dati nella fifo per 1 frame di output
             if(av_audio_fifo_size(fifo) < audioEncoderContext->frame_size)
                 continue;
+
             //---------------------------------------------------------------------------------------------------
             //ENCODING
             const int frame_size = FFMIN(av_audio_fifo_size(fifo),audioEncoderContext->frame_size);
 
-            //cout << "readable:" << av_audio_fifo_size(fifo) << endl;
-            //av_audio_fifo_drain(fifo, frame_size);
-            //cout << "after drain readable:" << av_audio_fifo_size(fifo) << endl;
-
             init_output_audio_frame();
 
-            if (av_audio_fifo_read(fifo, (void **)outFrameAudio->data, frame_size) < frame_size) {
-                fprintf(stderr, "Could not read data from FIFO\n");
-                //av_frame_free(&output_frame);
-                //return AVERROR_EXIT;
-            }
-
-            outFrameAudio->pts = pts;
-            pts += 1;//outFrameAudio->nb_samples;
-            cout << "audio frame pts: " << outFrameAudio->pts ;
-
-            value = avcodec_send_frame(audioEncoderContext, outFrameAudio); //invia il frame da codificare all'encoder
-            if (value == AVERROR(EAGAIN) || value == AVERROR_EOF || value == AVERROR(EINVAL)) {
-                return 1;//break;
-            } else if (value < 0) {
-                av_log(NULL, AV_LOG_ERROR, "Error while receiving a frame from the decoder\n");
-                return 1;//break;
-            }
-
-            AVPacket *outPacketAudio;
-            outPacketAudio = av_packet_alloc();
-
-            int error = avcodec_receive_packet(audioEncoderContext, outPacketAudio);
-            /* If the encoder asks for more data to be able to provide an
-             * encoded frame, return indicating that no data is present. */
-            if (error == AVERROR(EAGAIN)) {
-                error = 0;
-                continue;
-                /* If the last frame has been encoded, stop encoding. */
-            } else if (error == AVERROR_EOF) {
-                cout << " mette da parte e non scrivo ancora";
-                error = 0;
-                exit(1);
-            } else if (error < 0) {
-                fprintf(stderr, "Could not encode frame (error)\n");
-                /* Default case: Return encoded data. */
-                exit(1);
-            } else {
-                //outPacketAudio->pts = pts;
-                //pts += outFrameAudio->nb_samples;
-                cout << "audio pts: " << outPacketAudio->pts << " audio dts: " << outPacketAudio->dts;
-                //cout << outPacket->pts << endl;
-                error = av_interleaved_write_frame(outAVFormatContext, outPacketAudio);
-                if( error < 0) {
-                    cout << " noooo" << endl;
-                }else{
-                    cout << " ok" << endl;
+            //cout << "dimensione fifo: " << av_audio_fifo_size(fifo) << endl;
+            while(av_audio_fifo_size(fifo) > audioEncoderContext->frame_size) {
+                if (av_audio_fifo_read(fifo, (void **) outFrameAudio->data, frame_size) < frame_size) {
+                    fprintf(stderr, "Could not read data from FIFO\n");
+                    //av_frame_free(&output_frame);
+                    //return AVERROR_EXIT;
                 }
+                //cout << "dimensione fifo: " << av_audio_fifo_size(fifo) << endl;
+
+                outFrameAudio->pts = pts;
+                pts += outFrameAudio->nb_samples;
+                cout << "audio frame pts: " << outFrameAudio->pts << endl;
+
+                value = avcodec_send_frame(audioEncoderContext,
+                                           outFrameAudio); //invia il frame da codificare all'encoder
+                if (value == AVERROR(EAGAIN) || value == AVERROR_EOF || value == AVERROR(EINVAL)) {
+                    return 1;//break;
+                } else if (value < 0) {
+                    av_log(NULL, AV_LOG_ERROR, "Error while receiving a frame from the decoder\n");
+                    return 1;//break;
+                }
+
+                AVPacket *outPacketAudio;
+                outPacketAudio = av_packet_alloc();
+
+                int error = avcodec_receive_packet(audioEncoderContext, outPacketAudio);
+                //* If the encoder asks for more data to be able to provide an
+                //* encoded frame, return indicating that no data is present.
+                if (error == AVERROR(EAGAIN)) {
+                    error = 0;
+                    continue;
+                    // If the last frame has been encoded, stop encoding.
+                } else if (error == AVERROR_EOF) {
+                    cout << " mette da parte e non scrivo ancora";
+                    error = 0;
+                    exit(1);
+                } else if (error < 0) {
+                    fprintf(stderr, "Could not encode frame (error)\n");
+                    // Default case: Return encoded data.
+                    exit(1);
+                } else {
+                    cout << "audio pts: " << outPacketAudio->pts << " audio dts: " << outPacketAudio->dts;
+                    error = av_interleaved_write_frame(outAVFormatContext_audio, outPacketAudio);
+                    if (error < 0) {
+                        cout << " noooo" << endl;
+                    } else {
+                        cout << " ok" << endl;
+                    }
+                }
+                av_packet_unref(outPacketAudio);
             }
-            av_packet_unref(outPacketAudio);
         }
     }// End of while-loop
 
-    value = av_write_trailer(outAVFormatContext);
+    value = av_write_trailer(outAVFormatContext_video);
+
+    if( value < 0)
+    {
+        cout<<"\nerror in writing av trailer";
+        exit(1);
+    }
+
+    value = av_write_trailer(outAVFormatContext_audio);
 
     if( value < 0)
     {

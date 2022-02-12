@@ -57,9 +57,11 @@ private:
     const AVInputFormat *pAVInputFormat;//input di acquisizione
     AVFormatContext *pAVFormatContext;//context dell'input di acquisizione
 
-    AVFormatContext *outAVFormatContext;//context del file finale
-
     const AVOutputFormat *output_format;
+    AVFormatContext *outAVFormatContext_audio;//context del file finale
+    AVFormatContext *outAVFormatContext_video;//context del file finale
+
+
 
     AVCodecContext *videoDecoderContext;
     AVCodecContext *videoEncoderContext;
@@ -75,17 +77,19 @@ private:
     AVStream *audio_st;
 
     AVFrame *inAudioFrame;
-    AVFrame *outAudioFrame;
+    AVFrame *outFrameAudio;
+
     AVFrame *inFrame;
     AVFrame *outFrame;
     AVPacket *inPacket;
     AVPacket *outPacket;
 
-    AVFrame *outFrameAudio;
+
     AVDictionary *options;
     AVOutputFormat *outAVOutputFormat;
 
-    const char *output_file;
+    const char *output_file_audio;
+    const char *output_file_video;
 
     int videoStreamIndx;
     int audioStreamIndx;
@@ -95,7 +99,6 @@ private:
     AVAudioFifo *fifo = NULL;
     SwrContext *resample_context = NULL;
 
-    int64_t pts = 0;
     int init_fifo();
     int init_resampler();
     int convert_samples(const uint8_t **input_data, uint8_t **converted_data, const int frame_size);
@@ -116,7 +119,8 @@ public:
     int openScreenAndMic();
     int openScreen();
 
-    int init_outputfile(std::string output_file);//deve essere chiamata prima dei set encoders
+    int init_outputfile_audio(std::string output_file);//deve essere chiamata prima dei set encoders
+    int init_outputfile_video(std::string output_file);//deve essere chiamata prima dei set encoders
 
     int setVideoDecoder();
     int setVideoEncoder();
@@ -126,6 +130,8 @@ public:
 
     int setVideoAudioEncoders();
     int setVideoAudioDecoders();
+
+    int encoding_fifo_audio_packets(int64_t videoPts);
 
     int recordVideo();
     int recordVideoAudio();
