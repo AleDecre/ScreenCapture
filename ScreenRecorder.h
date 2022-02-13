@@ -59,7 +59,8 @@ public:
     AVFormatContext *pAVFormatContext;//context dell'input di acquisizione
 
     const AVOutputFormat *output_format;
-    AVFormatContext *outAVFormatContext;//context del file finale
+    AVFormatContext *outAVFormatContext_audio;//context del file finale
+    AVFormatContext *outAVFormatContext_video;//context del file finale
 
 
 
@@ -88,7 +89,8 @@ public:
     AVDictionary *options;
     AVOutputFormat *outAVOutputFormat;
 
-    const char *output_file;
+    const char *output_file_audio;
+    const char *output_file_video;
 
     int videoStreamIndx;
     int audioStreamIndx;
@@ -119,7 +121,8 @@ public:
     int openScreen();
     int openMic();
 
-    int init_outputfile(std::string output_file);//deve essere chiamata prima dei set encoders
+    int init_outputfile_audio(std::string output_file);//deve essere chiamata prima dei set encoders
+    int init_outputfile_video(std::string output_file);//deve essere chiamata prima dei set encoders
 
     int writeInfo_afterSetEncoder_audio();
 
