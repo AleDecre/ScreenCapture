@@ -50,96 +50,105 @@ extern "C"
 }
 
 
-
-class ScreenRecorder
-{
+class ScreenRecorder {
 private:
 public:
-    const AVInputFormat *pAVInputFormat;//input di acquisizione
-    AVFormatContext *pAVFormatContext;//context dell'input di acquisizione
 
-    const AVOutputFormat *output_format;
+    int mux;
+    const AVInputFormat *pAVInputFormat_audio;//input di acquisizione
+    AVFormatContext *pAVFormatContext_audio;//context dell'input di acquisizione
     AVFormatContext *outAVFormatContext_audio;//context del file finale
-    AVFormatContext *outAVFormatContext_video;//context del file finale
-
-
-
-    AVCodecContext *videoDecoderContext;
-    AVCodecContext *videoEncoderContext;
     AVCodecContext *audioDecoderContext;
     AVCodecContext *audioEncoderContext;
-
-    const AVCodec *videoDecoder;
-    const AVCodec *videoEncoder;
     const AVCodec *audioDecoder;
     const AVCodec *audioEncoder;
-
-    AVStream *video_st;
     AVStream *audio_st;
-
     AVFrame *inAudioFrame;
     AVFrame *outFrameAudio;
+    AVPacket *inPacket_audio;
+    AVPacket *outPacket_audio;
+    const char *output_file_audio;
+    int audioStreamIndx;
+    SwrContext *resample_context = NULL;
+    AVAudioFifo *fifo = NULL;
 
-    AVFrame *inFrame;
-    AVFrame *outFrame;
-    AVPacket *inPacket;
-    AVPacket *outPacket;
-
+    const AVInputFormat *pAVInputFormat_video;//input di acquisizione
+    AVFormatContext *pAVFormatContext_video;//context dell'input di acquisizione
+    AVFormatContext *outAVFormatContext_video;//context del file finale
+    AVCodecContext *videoDecoderContext;
+    AVCodecContext *videoEncoderContext;
+    const AVCodec *videoDecoder;
+    const AVCodec *videoEncoder;
+    AVStream *video_st;
+    AVFrame *inVideoFrame;
+    AVFrame *outVideoFrame;
+    AVPacket *inPacket_video;
+    AVPacket *outPacket_video;
+    const char *output_file_video;
+    int videoStreamIndx;
+    SwsContext *swsCtx_;
 
     AVDictionary *options;
-    AVOutputFormat *outAVOutputFormat;
 
-    const char *output_file_audio;
-    const char *output_file_video;
+    ScreenRecorder(int i);
 
-    int videoStreamIndx;
-    int audioStreamIndx;
-
-    SwsContext* swsCtx_;
-
-    AVAudioFifo *fifo = NULL;
-    SwrContext *resample_context = NULL;
-
-    int init_fifo();
-    int init_resampler();
-    int convert_samples(const uint8_t **input_data, uint8_t **converted_data, const int frame_size);
-    int init_input_video_frame();
-    int init_output_video_frame();
-    int init_input_audio_frame();
-    int init_output_audio_frame();
-    int decode_encode_write_video(int j);
-    int add_samples_to_fifo(uint8_t **converted_input_samples, const int frame_size);
-    int init_converted_samples(uint8_t ***converted_input_samples, int frame_size);
-
-
-
-    ScreenRecorder();
     ~ScreenRecorder();
 
-    /* function to initiate communication with display library */
-    int openScreenAndMic();
-    int openScreen();
+
     int openMic();
 
     int init_outputfile_audio(std::string output_file);//deve essere chiamata prima dei set encoders
-    int init_outputfile_video(std::string output_file);//deve essere chiamata prima dei set encoders
-
-    int writeInfo_afterSetEncoder_audio();
-
-    int setVideoDecoder();
-    int setVideoEncoder();
 
     int setAudioDecoder();
+
     int setAudioEncoder();
 
-    int setVideoAudioEncoders();
-    int setVideoAudioDecoders();
+    int init_input_audio_frame();
 
-    int encoding_fifo_audio_packets(int64_t videoPts);
+    int init_output_audio_frame();
+
+    int init_resampler();
+
+    int init_fifo();
+
+    int init_converted_samples(uint8_t ***converted_input_samples, int frame_size);
+
+    int convert_samples(const uint8_t **input_data, uint8_t **converted_data, const int frame_size);
+
+    int add_samples_to_fifo(uint8_t **converted_input_samples, const int frame_size);
+
+    int recordAudio();
+
+    int stop = 0;
+
+
+    /* function to initiate communication with display library */
+    int openScreen();
+
+    int init_outputfile_video(std::string output_file);//deve essere chiamata prima dei set encoders
+
+    int setVideoDecoder();
+
+    int setVideoEncoder();
+
+    int init_input_video_frame();
+
+    int init_output_video_frame();
 
     int recordVideo();
-    int recordAudio();
+
+
+
+    int openScreenMic();
+
+    int init_outputfile_AV(std::string output_file);//deve essere chiamata prima dei set encoders
+
+    int setVideoAudioDecoders();
+
+    int setVideoAudioEncoders();
+
     int recordVideoAudio();
+
 };
 
 #endif
