@@ -8,6 +8,8 @@
 #include <cstring>
 #include <math.h>
 #include <string.h>
+#include <thread>
+#include <mutex>
 
 #define __STDC_CONSTANT_MACROS
 
@@ -23,15 +25,10 @@ extern "C"
 #include "libavdevice/avdevice.h"
 
 #include "libavfilter/avfilter.h"
-//#include "libavfilter/avfiltergraph.h"
 #include "libavfilter/buffersink.h"
 #include "libavfilter/buffersrc.h"
-
 #include "libavformat/avformat.h"
 #include "libavformat/avio.h"
-
-// libav resample
-
 #include "libavutil/opt.h"
 #include "libavutil/common.h"
 #include "libavutil/channel_layout.h"
@@ -48,13 +45,15 @@ extern "C"
 #include "libswscale/swscale.h"
 
 }
-
+using namespace std;
 
 class ScreenRecorder {
 private:
 public:
 
     int mux;
+
+    mutex recording;
     const AVInputFormat *pAVInputFormat_audio;//input di acquisizione
     AVFormatContext *pAVFormatContext_audio;//context dell'input di acquisizione
     AVFormatContext *outAVFormatContext_audio;//context del file finale
