@@ -31,48 +31,53 @@ int main()
 
 
 
-/*
-    screen_record.openMic();
-    screen_record.init_outputfile_audio("C:/Users/aless/Desktop/video.mp4");
-    screen_record.setAudioDecoder();
-    screen_record.setAudioEncoder();
-    screen_record.recordAudio();
 
+
+    screen_record.init_outputfile_AV("C:/Users/aless/Desktop/abc.mp4");
 
     screen_record.openScreen();
-    screen_record.init_outputfile_video("C:/Users/aless/Desktop/video.mp4");
     screen_record.setVideoDecoder();
     screen_record.setVideoEncoder();
 
 
+    screen_record.openMic();
+    screen_record.setAudioDecoder();
+    screen_record.setAudioEncoder();
+
+    screen_record.create_outputfile();
+
+
     std::thread first (foo);     // spawn new thread that calls foo()
-    std::thread second (bar);  // spawn new thread that calls bar(0)
+    std::thread second (bar);  // spawn new thread that calls bar()
 
     std::cout << "main, foo and bar now execute concurrently...\n";
 
     // synchronize threads:
     first.join();                // pauses until first finishes
     second.join();               // pauses until second finishes
-*/
 
-    screen_record.openScreenMic();
-    screen_record.init_outputfile_AV("C:/Users/aless/Desktop/video.mp4");
-    screen_record.setVideoAudioDecoders();
-    screen_record.setVideoAudioEncoders();
-    screen_record.recordVideoAudio();
+    screen_record.closeAudio();
+    screen_record.closeVideo();
+
+    sleep(5);
+
+    screen_record.openScreen();
+    screen_record.openMic();
+
+    std::thread first1 (foo);     // spawn new thread that calls foo()
+    std::thread second2 (bar);  // spawn new thread that calls bar()
+
+    std::cout << "main, foo and bar now execute concurrently...\n";
+
+    // synchronize threads:
+    first1.join();                // pauses until first finishes
+    second2.join();               // pauses until second finishes
 
 
+    screen_record.close_outputfile();
 
 
     std::cout << "foo and bar completed.\n";
 
     return 0;
 }
-
-
-
-
-
-
-
-

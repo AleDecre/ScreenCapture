@@ -10,6 +10,7 @@
 #include <string.h>
 #include <thread>
 #include <mutex>
+#include <unistd.h>
 
 #define __STDC_CONSTANT_MACROS
 
@@ -52,8 +53,10 @@ private:
 public:
 
     int mux;
+    int64_t pts = 0;
 
     mutex recording;
+    mutex stop_m;
     const AVInputFormat *pAVInputFormat_audio;//input di acquisizione
     AVFormatContext *pAVFormatContext_audio;//context dell'input di acquisizione
     AVFormatContext *outAVFormatContext_audio;//context del file finale
@@ -118,6 +121,8 @@ public:
 
     int recordAudio();
 
+    int closeAudio();
+
     int stop = 0;
 
 
@@ -136,6 +141,8 @@ public:
 
     int recordVideo();
 
+    int closeVideo();
+
 
 
     int openScreenMic();
@@ -148,6 +155,9 @@ public:
 
     int recordVideoAudio();
 
+    int create_outputfile();
+
+    int close_outputfile();
 };
 
 #endif
