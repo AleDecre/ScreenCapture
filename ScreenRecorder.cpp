@@ -94,6 +94,49 @@ static int select_channel_layout(const AVCodec *codec) {
     return best_ch_layout;
 }
 
+//METODI PER ENCODER VIDEO
+static AVFrame *crop_frame(const AVFrame *in, int left, int top, int right, int bottom)
+{
+    AVFilterContext *buffersink_ctx;
+    AVFilterContext *buffersrc_ctx;
+    AVFilterGraph *filter_graph = avfilter_graph_alloc();
+    AVFrame *f = av_frame_alloc();
+    AVFilterInOut *inputs = NULL, *outputs = NULL;
+    char args[512];
+    int value;
+
+    snprintf(args, sizeof(args),
+             "buffer=video_size=%dx%d:pix_fmt=%d:time_base=1/1:pixel_aspect=0/1[in];"
+             "[in]crop=1000:100[out];"
+             "[out]buffersink",
+             in->width, in->height, in->format);
+
+    //"[in]crop=x=%d:y=%d:out_w=in_w-%d-%d:out_h=in_h-%d-%d[out];"
+    //left, top, left, right, top, bottom
+
+    value = avfilter_graph_parse2(filter_graph, args, &inputs, &outputs);
+    if (value < 0) return NULL;
+    assert(inputs == NULL && outputs == NULL);
+    value = avfilter_graph_config(filter_graph, NULL);
+    if (value < 0) return NULL;
+
+    buffersrc_ctx = avfilter_graph_get_filter(filter_graph, "Parsed_buffer_0");
+    buffersink_ctx = avfilter_graph_get_filter(filter_graph, "Parsed_buffersink_2");
+    assert(buffersrc_ctx != NULL);
+    assert(buffersink_ctx != NULL);
+
+    av_frame_ref(f, in);
+    value = av_buffersrc_add_frame(buffersrc_ctx, f);
+    if (value < 0) return NULL;
+    value = av_buffersink_get_frame(buffersink_ctx, f);
+    if (value < 0) return NULL;
+
+    avfilter_graph_free(&filter_graph);
+
+    return f;
+}
+
+
 //REGISTRATORE VOCALE
 int ScreenRecorder::openMic() {
     int value = 0;
@@ -410,12 +453,13 @@ int ScreenRecorder::recordAudio() {
     while (av_read_frame(pAVFormatContext_audio, inPacket_audio) >= 0) {
         stop_m.lock();
         if (stop == 1){
+            stop_m.unlock();
             break;
         }
         stop_m.unlock();
-        cout << endl << endl;
+        //TODO cout << endl << endl;
         if (inPacket_audio->stream_index == audioStreamIndx) {
-            cout << "audio packet" << endl;
+            //TODO cout << "audio packet" << endl;
             //---------------------------------------------------------------------------------------------------
             //DECODING
             value = avcodec_send_packet(audioDecoderContext, inPacket_audio);
@@ -470,7 +514,7 @@ int ScreenRecorder::recordAudio() {
                 outFrameAudio->pts = pts;
                 outFrameAudio->pkt_dts = pts;
                 pts += outFrameAudio->nb_samples;
-                cout << "audio frame pts: " << outFrameAudio->pts << endl;
+                //TODO cout << "audio frame pts: " << outFrameAudio->pts << endl;
 
                 value = avcodec_send_frame(audioEncoderContext,
                                            outFrameAudio); //invia il frame da codificare all'encoder
@@ -500,7 +544,7 @@ int ScreenRecorder::recordAudio() {
                     // Default case: Return encoded data.
                     exit(1);
                 } else {
-                    cout << "audio pts: " << outPacket_audio->pts << " audio dts: " << outPacket_audio->dts;
+                    //TODO cout << "audio pts: " << outPacket_audio->pts << " audio dts: " << outPacket_audio->dts;
                     outPacket_audio->stream_index = 1;
                     outPacket_audio->time_base = audio_st->time_base;
 
@@ -510,7 +554,7 @@ int ScreenRecorder::recordAudio() {
                     if (value < 0) {
                         cout << " noooo" << endl;
                     } else {
-                        cout << " ok" << endl;
+                        //TODO cout << " ok" << endl;
                     }
                 }
             }
@@ -519,8 +563,6 @@ int ScreenRecorder::recordAudio() {
         }
     }// End of while-loop
 
-    stop = 0;
-    stop_m.unlock();
 
     return 0;
 }
@@ -549,12 +591,14 @@ int ScreenRecorder::openScreen() {
     options = NULL;
     pAVFormatContext_video = NULL;
 
+     //av_dict_set(&options, "video_size", "1280x720", 0);
+
     pAVFormatContext_video = avformat_alloc_context();
 
     pAVInputFormat_video = av_find_input_format("dshow");
 
-    value = avformat_open_input(&pAVFormatContext_video, "video=screen-capture-recorder", pAVInputFormat_video,
-                                NULL);
+
+    value = avformat_open_input(&pAVFormatContext_video, "video=screen-capture-recorder", pAVInputFormat_video, &options);
     if (value != 0) {
         cout << "\nerror in opening input device";
         exit(value);
@@ -796,8 +840,14 @@ int ScreenRecorder::recordVideo() {
     int no_frames = 200;
 
     while (av_read_frame(pAVFormatContext_video, inPacket_video) >= 0) {
-        if (ii++ == no_frames)break;
-        cout << endl << endl << ii << endl << endl;
+        stop_m.lock();
+        if (stop == 1) {
+            stop_m.unlock();
+            break;
+        }
+        stop_m.unlock();
+
+        //TODO cout << endl << endl << ii << endl << endl;
         if (inPacket_video->stream_index == videoStreamIndx) {
             value = avcodec_send_packet(videoDecoderContext, inPacket_video); //inviamo il pacchetto al decoder
             if (value < 0) {
@@ -814,18 +864,16 @@ int ScreenRecorder::recordVideo() {
                 return 1;//break;
             }
 
-            //lista a puntatori di pacchetti decodificati.............
-            //lista a puntattoi di audio decodificati....
-            //audio e video con pts ok in una struttra dati.....
-            //1 processo salva tutti i frame video in un video
-            //1 provesso salva tutti i frame audio in un audio
-            //processo padre muxa il tutto
-            //elimina vidoe e audio iniziali e salva solo muxato
 
             sws_scale(swsCtx_, inVideoFrame->data, inVideoFrame->linesize, 0, videoDecoderContext->height,
                       outVideoFrame->data, outVideoFrame->linesize);
             outPacket_video->data = NULL;    // packet data will be allocated by the encoder
             outPacket_video->size = 0;
+
+
+            //outVideoFrame = crop_frame(outVideoFrame, 100, 100, 300, 400);
+
+
 
             value = avcodec_send_frame(videoEncoderContext, outVideoFrame); //invia il frame da codificare all'encoder
             if (value == AVERROR(EAGAIN) || value == AVERROR_EOF || value == AVERROR(EINVAL)) {
@@ -855,9 +903,9 @@ int ScreenRecorder::recordVideo() {
             outPacket_video->dts = av_rescale_q(outPacket_video->dts, videoEncoderContext->time_base,
                                                 video_st->time_base);
 
-            cout << "video pts: " << outPacket_video->pts;
-            cout << "\nvideo dts: " << outPacket_video->dts;
-            printf("\nWrite frame video %3d %3d (size= %2d)\n", 0, outPacket_video->size / 1000);
+            //TODO cout << "video pts: " << outPacket_video->pts;
+            //TODO cout << "\nvideo dts: " << outPacket_video->dts;
+            //TODO printf("\nWrite frame video %3d %3d (size= %2d)\n", 0, outPacket_video->size / 1000);
 
             outPacket_video->time_base = video_st->time_base;
 
@@ -868,7 +916,7 @@ int ScreenRecorder::recordVideo() {
             if ( value != 0) {
                 cout << "error in writing video frame\n";
             } else {
-                cout << "ok write video" << endl;
+                //TODO cout << "ok write video" << endl;
             }
 
 
@@ -876,10 +924,6 @@ int ScreenRecorder::recordVideo() {
             av_packet_unref(outPacket_video);
         }
     }// End of while-loop
-
-    stop_m.lock();
-    stop = 1;
-    stop_m.unlock();
 
     return 0;
 }

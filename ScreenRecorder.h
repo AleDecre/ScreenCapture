@@ -11,6 +11,8 @@
 #include <thread>
 #include <mutex>
 #include <unistd.h>
+#include <assert.h>
+
 
 #define __STDC_CONSTANT_MACROS
 
