@@ -54,14 +54,18 @@ class ScreenRecorder {
 private:
 public:
 
-    int mux;
+    int audio;
     int64_t pts = 0;
-
+    int stop = 0;
     mutex recording;
     mutex stop_m;
+
+    int origin_x;
+    int origin_y;
+    std::string videoSize;
+
     const AVInputFormat *pAVInputFormat_audio;//input di acquisizione
     AVFormatContext *pAVFormatContext_audio;//context dell'input di acquisizione
-    AVFormatContext *outAVFormatContext_audio;//context del file finale
     AVCodecContext *audioDecoderContext;
     AVCodecContext *audioEncoderContext;
     const AVCodec *audioDecoder;
@@ -71,7 +75,6 @@ public:
     AVFrame *outFrameAudio;
     AVPacket *inPacket_audio;
     AVPacket *outPacket_audio;
-    const char *output_file_audio;
     int audioStreamIndx;
     SwrContext *resample_context = NULL;
     AVAudioFifo *fifo = NULL;
@@ -88,20 +91,24 @@ public:
     AVFrame *outVideoFrame;
     AVPacket *inPacket_video;
     AVPacket *outPacket_video;
-    const char *output_file_video;
+    std::string output_file_video;
     int videoStreamIndx;
     SwsContext *swsCtx_;
 
     AVDictionary *options;
 
-    ScreenRecorder();
+    ScreenRecorder(int audio);
 
     ~ScreenRecorder();
 
 
-    int openMic();
+    int init_outputfile_AV(std::string output_file);//deve essere chiamata prima dei set encoders
 
-    int init_outputfile_audio(std::string output_file);//deve essere chiamata prima dei set encoders
+    int create_outputfile();
+
+    int close_outputfile();
+
+    int openMic();
 
     int setAudioDecoder();
 
@@ -125,13 +132,11 @@ public:
 
     int closeAudio();
 
-    int stop = 0;
+
 
 
     /* function to initiate communication with display library */
     int openScreen();
-
-    int init_outputfile_video(std::string output_file);//deve essere chiamata prima dei set encoders
 
     int setVideoDecoder();
 
@@ -146,20 +151,6 @@ public:
     int closeVideo();
 
 
-
-    int openScreenMic();
-
-    int init_outputfile_AV(std::string output_file);//deve essere chiamata prima dei set encoders
-
-    int setVideoAudioDecoders();
-
-    int setVideoAudioEncoders();
-
-    int recordVideoAudio();
-
-    int create_outputfile();
-
-    int close_outputfile();
 };
 
 #endif

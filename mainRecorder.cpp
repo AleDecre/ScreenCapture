@@ -65,7 +65,7 @@ int maaaain()
     screen_record.setAudioDecoder();
     screen_record.setAudioEncoder();
 
-    screen_record.create_outputfile();
+    screen_record.create_outputfile(1);
 
 
 

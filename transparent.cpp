@@ -1,9 +1,10 @@
 #include "transparent.h"
 
-Transparent::Transparent(QLabel *label)
+Transparent::Transparent(QLabel *label, QLabel *label1)
 {
     rubberBand = nullptr;
     this->label = label;
+    this->label1 = label1;
 }
 
 void Transparent::mousePressEvent(QMouseEvent *event)
@@ -28,19 +29,20 @@ void Transparent::mouseReleaseEvent(QMouseEvent *event)
 
     QSettings settings("HKEY_CURRENT_USER\\Software\\screen-capture-recorder",
                        QSettings::NativeFormat);
-    settings.setValue("capture_height", rubberBand->geometry().width());
-    settings.setValue("capture_width", rubberBand->geometry().height());
-    settings.setValue("start_x", origin.rx());
-    settings.setValue("start_y",  origin.ry());
+    settings.setValue("capture_height", rubberBand->geometry().height());
+    settings.setValue("capture_width", rubberBand->geometry().width());
+    settings.setValue("start_x", rubberBand->geometry().topLeft().rx());
+    settings.setValue("start_y",  rubberBand->geometry().topLeft().ry());
 
     QString x = "Area Selezionata: origine (" +
-            QString::number(origin.rx()) +
+            QString::number(rubberBand->geometry().topLeft().rx()) +
             "," +
-            QString::number(origin.ry()) +
+            QString::number(rubberBand->geometry().topLeft().ry()) +
             "), dimensione: " +
             QString::number(rubberBand->geometry().width()) +
             "x" +
             QString::number(rubberBand->geometry().height());
 
     label->setText(x);
+    label1->setText(x);
 }

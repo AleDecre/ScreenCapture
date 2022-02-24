@@ -21,9 +21,10 @@ public:
     QString dir;
     QString fileNameOutput;
 
-    ScreenRecorder sc;
+    ScreenRecorder *sc;
+    std::vector<std::thread> thread_vector;
 
-    Transparent *drag;
+    Transparent *drag = nullptr;
 
 private slots:
     void on_pushButton_clicked();
@@ -33,6 +34,12 @@ private slots:
     void on_pushButton_3_clicked();
 
     void on_pushButton_4_clicked();
+
+    void on_pushButton_6_clicked();
+
+    void on_pushButton_7_clicked();
+
+    void on_pushButton_5_clicked();
 
 private:
     Ui::MainWindow *ui;

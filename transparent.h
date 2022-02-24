@@ -18,8 +18,9 @@ public:
     QRubberBand *rubberBand;
     QPoint origin;
     QLabel *label;
+    QLabel *label1;
 
-    Transparent(QLabel *label);
+    Transparent(QLabel *label, QLabel *label1);
     void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
