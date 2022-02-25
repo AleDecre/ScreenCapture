@@ -673,7 +673,7 @@ int ScreenRecorder::setVideoEncoder() {
     videoEncoderContext->codec_id = AV_CODEC_ID_MPEG4;// AV_CODEC_ID_MPEG4; // AV_CODEC_ID_H264 // AV_CODEC_ID_MPEG1VIDEO
     videoEncoderContext->codec_type = AVMEDIA_TYPE_VIDEO;
     videoEncoderContext->pix_fmt = AV_PIX_FMT_YUV420P;
-    videoEncoderContext->bit_rate = 4000000; // 2500000
+    videoEncoderContext->bit_rate = 40000000; // 2500000
     videoEncoderContext->width = videoDecoderContext->width;
     videoEncoderContext->height = videoDecoderContext->height;
     videoEncoderContext->gop_size = 12;
