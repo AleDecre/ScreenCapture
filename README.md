@@ -1,14 +1,14 @@
 # Documentazione libreria ScreenRecorder
-## ***Classe Screen Recoder***
+## ***Classe ScreenRecorder***
 &nbsp;
 
 ## Costruttore
 ### ScreenRecorder(int audio)
-#### Costruttore della classe Screen Recoder.
+#### Costruttore della classe ScreenRecorder.
 
 |Parametro| Descrizione | 
 |---| ---|
-|***int*** audio| Se = 1 inizializza l'oggetto per la registrazione audio e video. Se = 0, inizializza l'oggetto per la registrazione solo video.|
+|***int*** audio| Se = 1 inizializza l'oggetto per la registrazione audio e video, se = 0 inizializza l'oggetto per la registrazione solo video.|
 
 >**Esempi:**
 >
@@ -65,6 +65,84 @@
 >- sc->close_outputfile();
 
 &nbsp;\
+&nbsp;
+
+## Metodi per il video
+
+### ***int*** openScreen()
+#### Apre l'input device video.
+
+|Valore di ritorno| Descrizione | 
+|---| ---|
+|0| Ritorno con successo|
+|1| Ritorno con errore apertura dell'input device|
+|-1| Ritorno con errore|
+
+>**Esempi:**
+>
+>- sc->openScreen();
+
+&nbsp;
+
+### ***int*** setVideoDecoder()
+#### Inizializza e imposta il decoder video. In caso di errore non recuperabile, l'applicazione termina forzatamente con un codice di errore.
+
+|Valore di ritorno| Descrizione | 
+|---| ---|
+|0| Ritorno con successo|
+
+>**Esempi:**
+>
+>- sc->setVideoDecoder();
+
+&nbsp;
+
+### ***int*** setVideoEncoder()
+#### Inizializza e alloca l'encoder video a partire dal formato del file di output, impostando i parametri ottimali. In caso di errore non recuperabile, l'applicazione termina forzatamente con un codice di errore.
+
+|Valore di ritorno| Descrizione | 
+|---| ---|
+|0| Ritorno con successo|
+
+>**Esempi:**
+>
+>- sc->setVideoEncoder();
+
+&nbsp;
+
+### ***int*** recordVideo()
+#### Inizia l'acquisizione di pacchetti video per un tempo indefinito. Per gestire la terminazione bisogna invocare la funzione all'interno di un thread e agire sul mutex `stop_m` per modificare la variabile condivisa (flag) `stop`. In caso di errore non recuperabile, l'applicazione termina forzatamente con un codice di errore.
+
+|Valore di ritorno| Descrizione | 
+|---| ---|
+|0| Ritorno con successo|
+|1| Ritorno con errore nel processare il pacchetto|
+
+>**Esempi:**
+>
+> *Da usare all'interno di un thread*
+>- sc->recordVideo();
+
+>*Interruzione acquisizione:*
+>
+>- sc->stop_m.lock(); \
+> sc->stop = 1; \
+> sc->stop_m.unlock();
+
+&nbsp;
+
+### ***int*** closeVideo()
+#### Chiude l'input video e libera la struttura dati relativa (AVFormatContext). In caso di errore non recuperabile, l'applicazione termina forzatamente con un codice di errore.
+
+|Valore di ritorno| Descrizione | 
+|---| ---|
+|0| Ritorno con successo|
+
+>**Esempi:**
+>
+>- sc->closeVideo();
+
+&nbsp; \
 &nbsp;
 
 ## Metodi per l'audio
@@ -141,79 +219,3 @@
 >**Esempi:**
 >
 >- sc->closeAudio();
-
-&nbsp; \
-&nbsp;
-
-## Metodi per il video
-
-### ***int*** openScreen()
-#### Apre l'input device video.
-
-|Valore di ritorno| Descrizione | 
-|---| ---|
-|0| Ritorno con successo|
-|1| Ritorno con errore apertura dell'input device|
-|-1| Ritorno con errore|
-
->**Esempi:**
->
->- sc->openScreen();
-
-&nbsp;
-
-### ***int*** setVideoDecoder()
-#### Inizializza e imposta il decoder video. In caso di errore non recuperabile, l'applicazione termina forzatamente con un codice di errore.
-
-|Valore di ritorno| Descrizione | 
-|---| ---|
-|0| Ritorno con successo|
-
->**Esempi:**
->
->- sc->setVideoDecoder();
-
-&nbsp;
-
-### ***int*** setVideoEncoder()
-#### Inizializza e alloca l'encoder video a partire dal formato del file di output, impostando i parametri ottimali. In caso di errore non recuperabile, l'applicazione termina forzatamente con un codice di errore.
-
-|Valore di ritorno| Descrizione | 
-|---| ---|
-|0| Ritorno con successo|
-
->**Esempi:**
->
->- sc->setVideoEncoder();
-
-&nbsp;
-
-### ***int*** recordVideo()
-#### Inizia l'acquisizione di pacchetti video per un tempo indefinito. Per gestire la terminazione bisogna invocare la funzione all'interno di un thread e agire sul mutex `stop_m` per modificare la variabile condivisa (flag) `stop`. In caso di errore non recuperabile, l'applicazione termina forzatamente con un codice di errore.
-
-|Valore di ritorno| Descrizione | 
-|---| ---|
-|0| Ritorno con successo|
-|1| Ritorno con errore nel processare il pacchetto|
-
->**Esempi:**
->
-> *Da usare all'interno di un thread*
->- sc->recordVideo();
-
->*Interruzione acquisizione:*
->
->- sc->stop_m.lock(); \
-> sc->stop = 1; \
-> sc->stop_m.unlock();
-
-### ***int*** closeVideo()
-#### Chiude l'input video e libera la struttura dati relativa (AVFormatContext). In caso di errore non recuperabile, l'applicazione termina forzatamente con un codice di errore.
-
-|Valore di ritorno| Descrizione | 
-|---| ---|
-|0| Ritorno con successo|
-
->**Esempi:**
->
->- sc->closeVideo();
